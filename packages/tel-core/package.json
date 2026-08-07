@@ -1,0 +1,15 @@
+{
+  "name": "@zero-path/tel-core",
+  "version": "1.0.0",
+  "private": true,
+  "description": "电话控制核心",
+  "files": [
+    "./dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp dev",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit"
+  }
+}
