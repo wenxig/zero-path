@@ -11,5 +11,8 @@
     "isolatedModules": true
   },
   "files": [],
-  "references": [{ "path": "./packages/tel-core/tsconfig.node.json" }]
+  "references": [
+    { "path": "./packages/tel-core/tsconfig.node.json" },
+    { "path": "./packages/ai-core/tsconfig.node.json" }
+  ]
 }

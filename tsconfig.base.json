@@ -25,6 +25,7 @@
   "files": [],
   "references": [
     { "path": "./packages/tel-core/tsconfig.json" },
+    { "path": "./packages/ai-core/tsconfig.json" },
     { "path": "./tsconfig.node.json" }
   ]
 }

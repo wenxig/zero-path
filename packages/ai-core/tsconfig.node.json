@@ -1,0 +1,10 @@
+{
+  "extends": ["../../tsconfig.node.json"],
+  "compilerOptions": {
+    "composite": true,
+    "noEmit": true,
+    "emitDeclarationOnly": false,
+    "types": ["node"]
+  },
+  "files": ["./vite.config.mts"]
+}
