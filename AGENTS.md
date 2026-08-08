@@ -40,6 +40,11 @@ In cloud environments, use `pnpm exec vp`.
 - 对于重复使用相同或相似的dom结构的，最好使用`提取组件`或`v-for`或vueuse的`createReusableTemplate`创建复用，这与上一条的`dry`思想相同
 - 使用 pnpm catalog 统一管理所有依赖版本（见 `pnpm-workspace.yaml`）
 
+### 任务与提交
+
+- 多步骤工作开始前，应按预期提交划分任务；每个任务对应一个职责单一、可独立审查和回滚的提交。
+- 每个提交只包含对应任务所需的改动，不得混入无关文件；提交前必须检查暂存区内容。
+
 ## 项目概览
 
 采用 **pnpm monorepo** 架构。
