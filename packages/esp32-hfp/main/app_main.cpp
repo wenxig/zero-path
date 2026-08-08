@@ -1,5 +1,6 @@
 #include <cstdint>
 
+#include "esp_chip_info.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "nvs_flash.h"
@@ -17,5 +18,7 @@ extern "C" void app_main() {
     ESP_ERROR_CHECK(nvs_result);
   }
 
-  ESP_LOGI(tag, "ESP32 HFP bridge skeleton, C++26, chip revision=%u", esp_get_chip_revision());
+  esp_chip_info_t chip_info{};
+  esp_chip_info(&chip_info);
+  ESP_LOGI(tag, "ESP32 HFP bridge skeleton, C++26, chip revision=%u", chip_info.revision);
 }

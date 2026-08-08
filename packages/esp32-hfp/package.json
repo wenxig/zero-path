@@ -4,8 +4,8 @@
   "private": true,
   "description": "ESP32-WROOM-32E HFP/SCO 固件",
   "scripts": {
-    "build": "../../scripts/firmware.sh build",
-    "configure": "../../scripts/firmware.sh configure",
-    "lint": "../../scripts/firmware.sh lint"
+    "build": "node ../../scripts/firmware.mjs build",
+    "configure": "node ../../scripts/firmware.mjs configure",
+    "lint": "node ../../scripts/firmware.mjs lint"
   }
 }
