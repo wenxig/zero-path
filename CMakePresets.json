@@ -1,0 +1,56 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": { "major": 3, "minor": 28, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "native-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/native/${presetName}",
+      "cacheVariables": {
+        "CMAKE_C_COMPILER": "$env{ZERO_PATH_LLVM_ROOT}/bin/clang",
+        "CMAKE_CXX_COMPILER": "$env{ZERO_PATH_LLVM_ROOT}/bin/clang++",
+        "CMAKE_CXX_COMPILER_LAUNCHER": "$env{ZERO_PATH_CCACHE}/ccache",
+        "CMAKE_MAKE_PROGRAM": "$env{ZERO_PATH_NINJA}",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/vcpkg-clang.cmake",
+        "VCPKG_INSTALLED_DIR": "${sourceDir}/.cache/vcpkg/installed",
+        "VCPKG_MANIFEST_MODE": "ON",
+        "ZERO_PATH_WARNINGS_AS_ERRORS": "ON"
+      }
+    },
+    {
+      "name": "native-debug",
+      "inherits": "native-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "native-release",
+      "inherits": "native-base",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Release" }
+    },
+    {
+      "name": "native-sanitize",
+      "inherits": "native-debug",
+      "cacheVariables": { "ZERO_PATH_ENABLE_SANITIZERS": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "native-debug", "configurePreset": "native-debug", "jobs": 4 },
+    { "name": "native-release", "configurePreset": "native-release", "jobs": 4 },
+    { "name": "native-sanitize", "configurePreset": "native-sanitize", "jobs": 4 }
+  ],
+  "testPresets": [
+    {
+      "name": "native-debug",
+      "configurePreset": "native-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "native-sanitize",
+      "configurePreset": "native-sanitize",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

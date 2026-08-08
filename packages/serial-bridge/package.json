@@ -1,0 +1,11 @@
+{
+  "name": "@zero-path/serial-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "macOS 端 ESP32 HFP 串口音频桥",
+  "scripts": {
+    "build": "../../scripts/native.sh build",
+    "lint": "../../scripts/native.sh lint",
+    "test": "../../scripts/native.sh test"
+  }
+}

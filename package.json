@@ -17,7 +17,20 @@
     "url": "git+https://github.com/wenxig/zero-path.git"
   },
   "type": "module",
-  "scripts": {},
+  "scripts": {
+    "firmware:bootstrap": "scripts/bootstrap-firmware.sh",
+    "firmware:build": "scripts/firmware.sh build",
+    "firmware:configure": "scripts/firmware.sh configure",
+    "firmware:lint": "scripts/firmware.sh lint",
+    "native:bootstrap": "scripts/bootstrap-native.sh",
+    "native:build": "scripts/native.sh build",
+    "native:configure": "scripts/native.sh configure",
+    "native:format": "scripts/native.sh format",
+    "native:format-check": "scripts/native.sh format-check",
+    "native:lint": "scripts/native.sh lint",
+    "native:sanitize": "scripts/native.sh sanitize",
+    "native:test": "scripts/native.sh test"
+  },
   "devDependencies": {
     "@commitlint/cli": "catalog:",
     "@commitlint/config-conventional": "catalog:",

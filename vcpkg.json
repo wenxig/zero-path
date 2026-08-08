@@ -1,0 +1,7 @@
+{
+  "name": "zero-path-native",
+  "version-string": "1.0.0",
+  "builtin-baseline": "d92484ed3c5020c6679d095ad3e5add907887b62",
+  "dependencies": ["asio", "catch2", "cli11", "fmt"],
+  "overrides": []
+}

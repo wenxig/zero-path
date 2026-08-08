@@ -1,0 +1,4 @@
+version: '1.0.0'
+description: 'Zero Path ESP32 HFP bridge application'
+dependencies:
+  idf: '>=6.0.2,<6.1.0'

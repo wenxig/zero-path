@@ -8,8 +8,11 @@
   ],
   "type": "module",
   "scripts": {
+    "answer:phone": "node --experimental-strip-types lib/answer-phone.ts",
     "build": "vp pack",
     "dev": "vp dev",
+    "probe:phone": "node --experimental-strip-types lib/probe-phone.ts",
+    "test": "vp test",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit"
   }
 }

@@ -1,4 +1,5 @@
 codegen
+ctest
 lightningcss
 oxfmtrc
 oxlint
@@ -8,3 +9,12 @@ tsgolint
 unstub
 voidzero
 wenxig
+getprop
+getenforce
+scrcpy
+dumpsys
+CTIA
+asio
+buildsystems
+CHAINLOAD
+WROOM
