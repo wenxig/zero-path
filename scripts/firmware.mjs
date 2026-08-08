@@ -182,9 +182,21 @@ function runFirmware(action) {
     throw new Error('ESP-IDF is unavailable; run vp run firmware:bootstrap first')
   }
 
-  const commands = { configure: ['set-target', 'esp32'], build: ['build'], lint: ['clang-check'] }
+  const port = process.argv.slice(3).find(argument => argument !== '--') ?? process.env.ESP_PORT
+  const commands = {
+    configure: ['set-target', 'esp32'],
+    build: ['build'],
+    flash: port ? ['-p', port, 'flash'] : undefined,
+    monitor: port ? ['-p', port, 'monitor'] : undefined,
+    lint: ['clang-check'],
+  }
   const args = commands[action]
-  if (!args) throw new Error('Usage: firmware.mjs {bootstrap|configure|build|lint}')
+  if (!args) {
+    if (action === 'flash' || action === 'monitor') {
+      throw new Error(`Serial port is required; pass it as an argument or set ESP_PORT`)
+    }
+    throw new Error('Usage: firmware.mjs {bootstrap|configure|build|flash|monitor|lint}')
+  }
 
   const env = getIdfEnvironment(idfDir)
   run(getIdfPython(env), [idfPy, '-C', projectDir, ...args], { env })

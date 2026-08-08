@@ -6,6 +6,8 @@
   "scripts": {
     "build": "node ../../scripts/firmware.mjs build",
     "configure": "node ../../scripts/firmware.mjs configure",
-    "lint": "node ../../scripts/firmware.mjs lint"
+    "flash": "node ../../scripts/firmware.mjs flash",
+    "lint": "node ../../scripts/firmware.mjs lint",
+    "monitor": "node ../../scripts/firmware.mjs monitor"
   }
 }
