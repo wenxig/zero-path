@@ -54,7 +54,8 @@ struct DecodeResult {
 
 [[nodiscard]] EncodeResult encode_frame(FrameView frame, std::span<std::byte> output);
 
-// Decoding happens in place. The delimiter byte, when present, is ignored.
+// Decoding happens in place. The returned payload aliases encoded and is valid only while the
+// input storage remains alive and unchanged. The delimiter byte, when present, is ignored.
 [[nodiscard]] DecodeResult decode_frame(std::span<std::byte> encoded);
 
 [[nodiscard]] const char* to_string(CodecError error);

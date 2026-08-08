@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cstring>
 
 namespace zero_path::audio_protocol {
 namespace {
@@ -113,10 +112,14 @@ void write_u64(std::byte* destination, std::uint64_t value) {
   auto write = 0uz;
   while (read < buffer.size()) {
     const auto code = std::to_integer<std::uint8_t>(buffer[read++]);
-    if (code == 0U || read + code - 1U > buffer.size())
+    if (code == 0U)
       return CodecError::malformed_cobs;
 
-    for (auto index = 1uz; index < code; ++index) {
+    const auto block_size = static_cast<std::size_t>(code - 1U);
+    if (block_size > buffer.size() - read)
+      return CodecError::malformed_cobs;
+
+    for (auto index = 0uz; index < block_size; ++index) {
       buffer[write++] = buffer[read++];
     }
     if (code != 0xffU && read < buffer.size())
@@ -138,7 +141,7 @@ EncodeResult encode_frame(FrameView frame, std::span<std::byte> output) {
   write_u32(raw.data() + 2, frame.sequence);
   write_u64(raw.data() + 6, frame.timestamp_us);
   write_u16(raw.data() + 14, static_cast<std::uint16_t>(frame.payload.size()));
-  std::memcpy(raw.data() + raw_header_size, frame.payload.data(), frame.payload.size());
+  std::ranges::copy(frame.payload, raw.begin() + raw_header_size);
   const auto raw_size = raw_header_size + frame.payload.size();
   write_u32(raw.data() + raw_size, crc32(std::span<const std::byte>(raw.data(), raw_size)));
 
