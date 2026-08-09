@@ -116,6 +116,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
     esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_NON_DISCOVERABLE);
     ESP_LOGI(tag, "Android audio test device connected, handle=%" PRIu32,
              parameter->srv_open.handle);
+    wakeWorker();
     break;
   case ESP_SPP_CLOSE_EVT:
     if (parameter->close.handle != connection_handle_.load()) {
@@ -130,6 +131,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
     resetTransmit();
     esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
     ESP_LOGI(tag, "Android audio test device disconnected");
+    wakeWorker();
     break;
   case ESP_SPP_DATA_IND_EVT:
     if (parameter->data_ind.status == ESP_SPP_SUCCESS && connected_.load() &&
@@ -143,6 +145,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
       break;
     }
     if (!write_pending_.load()) {
+      wakeWorker();
       break;
     }
     congested_.store(parameter->write.cong);
@@ -156,6 +159,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
         written > total - offset) {
       resetTransmit();
       ++dropped_frames_;
+      wakeWorker();
       break;
     }
     transmit_offset_.store(offset + written);
@@ -165,6 +169,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
       resetTransmit();
       ++dropped_frames_;
     }
+    wakeWorker();
     break;
   }
   case ESP_SPP_CONG_EVT:
@@ -176,6 +181,7 @@ void SppAudioTestServer::handleSppEvent( // NOLINT(readability-function-cognitiv
         resetTransmit();
         ++dropped_frames_;
       }
+      wakeWorker();
     }
     break;
   default:
@@ -197,23 +203,49 @@ void SppAudioTestServer::enqueueReceived(std::uint32_t generation, const std::ui
     data += count;
     size -= count;
   }
+  wakeWorker();
+}
+
+void SppAudioTestServer::wakeWorker() {
+  if (worker_task_ != nullptr) {
+    xTaskNotifyGive(worker_task_);
+  }
 }
 
 void SppAudioTestServer::workerLoop() {
   auto chunk = RxChunk{};
   auto last_tone_tick = xTaskGetTickCount();
-  const auto worker_wait = std::max<TickType_t>(1, pdMS_TO_TICKS(10));
+  auto tone_active = false;
   const auto tone_interval = std::max<TickType_t>(1, pdMS_TO_TICKS(20));
   while (true) {
-    if (xQueueReceive(receive_queue_, &chunk, worker_wait) == pdPASS) {
+    while (xQueueReceive(receive_queue_, &chunk, 0) == pdPASS) {
       consume(chunk);
     }
 
     const auto now = xTaskGetTickCount();
-    if (connected_.load() && download_enabled_.load() && now - last_tone_tick >= tone_interval) {
-      sendDownloadTone();
+    const auto tone_enabled = connected_.load() && download_enabled_.load();
+    auto wait = portMAX_DELAY;
+    if (!tone_enabled) {
+      tone_active = false;
+    } else if (!tone_active) {
+      tone_active = true;
       last_tone_tick = now;
+      wait = tone_interval;
+    } else {
+      auto elapsed = now - last_tone_tick;
+      if (elapsed >= tone_interval && !write_pending_.load() && !congested_.load()) {
+        if (sendDownloadTone()) {
+          last_tone_tick += tone_interval;
+          elapsed = xTaskGetTickCount() - last_tone_tick;
+        } else {
+          wait = 1;
+        }
+      }
+      if (wait != 1 && elapsed < tone_interval) {
+        wait = tone_interval - elapsed;
+      }
     }
+    ulTaskNotifyTake(pdTRUE, wait);
   }
 }
 
@@ -301,23 +333,25 @@ void SppAudioTestServer::processFrame(std::size_t size) {
   }
 }
 
-void SppAudioTestServer::sendDownloadTone() {
+bool SppAudioTestServer::sendDownloadTone() {
   auto payload = std::array<std::byte, pcm_frame_bytes>{};
+  auto next_tone_phase = tone_phase_;
   for (auto sample = 0UZ; sample < samples_per_frame; ++sample) {
-    const auto angle = 2.0F * static_cast<float>(M_PI) * static_cast<float>(tone_phase_) /
+    const auto angle = 2.0F * static_cast<float>(M_PI) * static_cast<float>(next_tone_phase) /
                        static_cast<float>(sample_rate);
     const auto value = static_cast<std::int16_t>(std::sin(angle) * tone_amplitude);
     payload[sample * 2] = static_cast<std::byte>(value & 0xff);
     payload[(sample * 2) + 1] =
         static_cast<std::byte>((static_cast<std::uint16_t>(value) >> 8) & 0xff);
-    tone_phase_ = (tone_phase_ + tone_frequency) % sample_rate;
+    next_tone_phase = (next_tone_phase + tone_frequency) % sample_rate;
   }
   if (!sendFrame(static_cast<std::uint8_t>(audio_protocol::MessageType::audio_downlink),
-                 payload.data(), payload.size())) {
-    ++dropped_frames_;
-  } else {
-    ++download_frames_;
+                  payload.data(), payload.size())) {
+    return false;
   }
+  tone_phase_ = next_tone_phase;
+  ++download_frames_;
+  return true;
 }
 
 bool SppAudioTestServer::sendFrame(std::uint8_t type, const std::byte* payload,

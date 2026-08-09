@@ -33,10 +33,11 @@ private:
 
   void handleSppEvent(esp_spp_cb_event_t event, esp_spp_cb_param_t* parameter);
   void enqueueReceived(std::uint32_t generation, const std::uint8_t* data, std::size_t size);
+  void wakeWorker();
   void workerLoop();
   void consume(const RxChunk& chunk);
   void processFrame(std::size_t size);
-  void sendDownloadTone();
+  bool sendDownloadTone();
   bool sendFrame(std::uint8_t type, const std::byte* payload, std::size_t payload_size);
   bool continueWrite(std::uint32_t handle);
   void resetTransmit();
