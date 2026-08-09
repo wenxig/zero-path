@@ -35,6 +35,7 @@ export default defineConfig({
     projects: [
       { test: { name: 'root', environment: 'node', include: ['script/**/*.test.ts'] } },
       'packages/tel-core',
+      'packages/phone-simulator-gateway',
     ],
   },
 })

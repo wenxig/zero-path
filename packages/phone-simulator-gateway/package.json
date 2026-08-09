@@ -1,0 +1,27 @@
+{
+  "name": "@zero-path/phone-simulator-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "局域网 Android 电话模拟器 MCP 网关",
+  "files": [
+    "./dist"
+  ],
+  "type": "module",
+  "scripts": {
+    "build": "vp pack",
+    "dev": "node --experimental-strip-types lib/index.ts",
+    "start": "node dist/index.mjs",
+    "test": "vp test",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "typescript": "catalog:"
+  }
+}
