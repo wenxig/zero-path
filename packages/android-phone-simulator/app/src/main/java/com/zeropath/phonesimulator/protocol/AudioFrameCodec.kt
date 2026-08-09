@@ -123,31 +123,43 @@ class AudioFrameCodec {
 }
 
 class AudioFrameStreamDecoder(private val codec: AudioFrameCodec = AudioFrameCodec()) {
-  private val buffer = ArrayList<Byte>(600)
+  private val buffer = ByteArray(MAX_ENCODED_FRAME_SIZE)
+  private var bufferSize = 0
   private var discardingOversizedFrame = false
 
-  fun feed(bytes: ByteArray, onFrame: (AudioFrame) -> Unit, onError: (Exception) -> Unit) {
-    for (byte in bytes) {
+  fun feed(
+    bytes: ByteArray,
+    onFrame: (AudioFrame) -> Unit,
+    onError: (Exception) -> Unit,
+    count: Int = bytes.size,
+  ) {
+    require(count in 0..bytes.size) { "invalid byte count" }
+    repeat(count) { index ->
+      val byte = bytes[index]
       if (discardingOversizedFrame) {
         if (byte == 0.toByte()) discardingOversizedFrame = false
-        continue
+        return@repeat
       }
       if (byte == 0.toByte()) {
-        if (buffer.isNotEmpty()) {
+        if (bufferSize > 0) {
           try {
-            onFrame(codec.decode(buffer.toByteArray()))
+            onFrame(codec.decode(buffer.copyOf(bufferSize)))
           } catch (error: Exception) {
             onError(error)
           }
-          buffer.clear()
+          bufferSize = 0
         }
-      } else if (buffer.size < 600) {
-        buffer.add(byte)
+      } else if (bufferSize < buffer.size) {
+        buffer[bufferSize++] = byte
       } else {
-        buffer.clear()
+        bufferSize = 0
         discardingOversizedFrame = true
         onError(IllegalArgumentException("encoded frame is too large"))
       }
     }
+  }
+
+  companion object {
+    private const val MAX_ENCODED_FRAME_SIZE = 600
   }
 }

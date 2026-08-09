@@ -145,7 +145,7 @@ class SppAudioTransport(context: Context) {
       while (isActive(active)) {
         val count = active.socket.inputStream.read(chunk)
         if (count < 0) break
-        decoder.feed(chunk.copyOf(count), onFrame, onDecodeError)
+        decoder.feed(chunk, onFrame, onDecodeError, count)
       }
     } catch (error: IOException) {
       closeActive(active, "ESP32 connection closed: ${error.message}")
@@ -194,7 +194,7 @@ class SppAudioTransport(context: Context) {
 
   private class Connection(val socket: BluetoothSocket) {
     val controlQueue = ArrayBlockingQueue<ByteArray>(16)
-    val audioQueue = ArrayBlockingQueue<ByteArray>(25)
+    val audioQueue = ArrayBlockingQueue<ByteArray>(2)
   }
 
   private data class ConnectionAttempt(

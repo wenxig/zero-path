@@ -40,6 +40,9 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
   private var downloadStopTask: ScheduledFuture<*>? = null
   private var uploadGeneration = 0L
   private var downloadGeneration = 0L
+  private var downloadTargetFrames = 0L
+  private var downloadRecordedFrames = 0L
+  private var downloadCompletionScheduled = false
   private var recorder: WavRecorder? = null
   private var sequence = 0L
   private var tonePhase = 0
@@ -81,13 +84,15 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
     synchronized(operationLock) {
       stopDownloadInternal(sendControl = true)
       stopUploadInternal(sendControl = true)
+      resetTestStats()
       sendControl(TestCommand.ENABLE_LOOPBACK)
       val currentGeneration = synchronized(stateLock) {
         status = "uploading $fixture"
         ++uploadGeneration
       }
-      val frameTask = scheduler.scheduleWithFixedDelay(
-        { sendUploadFrame(fixture, currentGeneration) },
+      val endNanos = SystemClock.elapsedRealtimeNanos() + TimeUnit.MILLISECONDS.toNanos(durationMs)
+      val frameTask = scheduler.scheduleAtFixedRate(
+        { sendUploadFrame(fixture, currentGeneration, endNanos) },
         0,
         20,
         TimeUnit.MILLISECONDS,
@@ -118,11 +123,15 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
     synchronized(operationLock) {
       stopUploadInternal(sendControl = true)
       stopDownloadInternal(sendControl = true)
+      resetTestStats()
       val directory = File(appContext.getExternalFilesDir(null), "downloads")
       require(directory.isDirectory || directory.mkdirs()) { "Cannot create the WAV download directory" }
       val newRecorder = WavRecorder(File(directory, "esp32-${System.currentTimeMillis()}.wav"))
       val currentGeneration = synchronized(stateLock) {
         recorder = newRecorder
+        downloadTargetFrames = durationMs / PCM_FRAME_DURATION_MS
+        downloadRecordedFrames = 0
+        downloadCompletionScheduled = false
         status = "downloading ESP32 tone"
         ++downloadGeneration
       }
@@ -139,7 +148,7 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
       }
       val stopTask = scheduler.schedule(
         { stopDownload(currentGeneration) },
-        durationMs,
+        durationMs + DOWNLOAD_TIMEOUT_MARGIN_MS,
         TimeUnit.MILLISECONDS,
       )
       synchronized(stateLock) { downloadStopTask = stopTask }
@@ -171,10 +180,11 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
     )
   }
 
-  private fun sendUploadFrame(fixture: String, expectedGeneration: Long) {
+  private fun sendUploadFrame(fixture: String, expectedGeneration: Long, endNanos: Long) {
     try {
       val publishNow = synchronized(operationLock) {
         if (synchronized(stateLock) { uploadGeneration != expectedGeneration }) return
+        if (SystemClock.elapsedRealtimeNanos() >= endNanos) return
         val payload = if (fixture == "silence") ByteArray(320) else toneFrame()
         val queued = transport.send(codec.encode(frame(MessageType.AUDIO_UPLINK, payload)))
         synchronized(stateLock) {
@@ -205,6 +215,17 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
     ) { "ESP32 control queue is full" }
   }
 
+  private fun resetTestStats() {
+    synchronized(stateLock) {
+      sentFrames = 0
+      receivedFrames = 0
+      droppedFrames = 0
+      lastDownlinkSequence = null
+      lastDownloadPath = null
+      downloadCompletionScheduled = false
+    }
+  }
+
   private fun frame(type: MessageType, payload: ByteArray): AudioFrame {
     val currentSequence = synchronized(stateLock) { sequence++ }
     return AudioFrame(type, currentSequence, SystemClock.elapsedRealtimeNanos() / 1_000, payload)
@@ -224,7 +245,9 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
 
   private fun handleFrame(frame: AudioFrame) {
     if (frame.type != MessageType.AUDIO_DOWNLINK) return
+    var completedGeneration: Long? = null
     val publishNow = synchronized(stateLock) {
+      if (downloadCompletionScheduled) return@synchronized false
       if (frame.payload.size != PCM_FRAME_BYTES) {
         droppedFrames++
         status = "invalid PCM frame size: ${frame.payload.size}"
@@ -234,9 +257,17 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
       if (expectedSequence != null && frame.sequence != expectedSequence) droppedFrames++
       lastDownlinkSequence = frame.sequence
       receivedFrames++
-      recorder?.write(frame.payload)
-      receivedFrames % 50L == 0L
+      recorder?.let {
+        it.write(frame.payload)
+        downloadRecordedFrames++
+        if (downloadRecordedFrames >= downloadTargetFrames) {
+          downloadCompletionScheduled = true
+          completedGeneration = downloadGeneration
+        }
+      }
+      receivedFrames % 50L == 0L || completedGeneration != null
     }
+    completedGeneration?.let { generation -> scheduler.execute { stopDownload(generation) } }
     if (publishNow) publish()
   }
 
@@ -287,6 +318,9 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
       downloadGeneration++
       downloadStopTask?.cancel(false)
       downloadStopTask = null
+      downloadTargetFrames = 0
+      downloadRecordedFrames = 0
+      if (recorder != null) downloadCompletionScheduled = true
       recorder.also { recorder = null }
     }
     var forcedDisconnect = false
@@ -324,6 +358,8 @@ class AudioTestController(context: Context, val transport: SppAudioTransport) {
   }
 
   companion object {
+    private const val DOWNLOAD_TIMEOUT_MARGIN_MS = 2_000L
+    private const val PCM_FRAME_DURATION_MS = 20L
     private const val PCM_FRAME_BYTES = 320
   }
 }

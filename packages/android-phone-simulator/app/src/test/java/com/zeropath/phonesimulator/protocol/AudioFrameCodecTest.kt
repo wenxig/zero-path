@@ -46,6 +46,21 @@ class AudioFrameCodecTest {
   }
 
   @Test
+  fun consumesOnlyTheBytesReadIntoAReusableBuffer() {
+    val decoder = AudioFrameStreamDecoder(codec)
+    val valid = codec.encode(AudioFrame(MessageType.HEARTBEAT, 11, 12, byteArrayOf()))
+    val readBuffer = ByteArray(valid.size + 4) { 1 }
+    valid.copyInto(readBuffer)
+    val frames = mutableListOf<AudioFrame>()
+    val errors = mutableListOf<Exception>()
+
+    decoder.feed(readBuffer, frames::add, errors::add, valid.size)
+
+    assertEquals(11, frames.single().sequence)
+    assertTrue(errors.isEmpty())
+  }
+
+  @Test
   fun matchesCppGoldenVector() {
     val encoded = codec.encode(
       AudioFrame(
