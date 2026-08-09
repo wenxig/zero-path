@@ -19,6 +19,14 @@ enum class MessageType : std::uint8_t {
   audio_uplink = 7,
   audio_stats = 8,
   error = 9,
+  test_command = 10,
+};
+
+enum class TestCommand : std::uint8_t {
+  start_download_tone = 1,
+  stop_download_tone = 2,
+  enable_loopback = 3,
+  disable_loopback = 4,
 };
 
 enum class CodecError : std::uint8_t {

@@ -1,6 +1,6 @@
 idf_component_register(
-  SRCS app_main.cpp
-  PRIV_REQUIRES bt nvs_flash esp_timer
+  SRCS app_main.cpp spp_audio_test_server.cpp
+  PRIV_REQUIRES audio-protocol bt nvs_flash esp_timer
   INCLUDE_DIRS "."
 )
 

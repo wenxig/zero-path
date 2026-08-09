@@ -105,6 +105,45 @@ TEST_CASE("CRC errors are rejected", "[frame_codec]") {
         CodecError::invalid_crc);
 }
 
+TEST_CASE("wire encoding matches the Android golden vector", "[frame_codec][compatibility]") {
+  constexpr std::array payload{std::byte{0}, std::byte{1}, std::byte{0}, std::byte{0xff}};
+  constexpr std::array expected{
+      std::byte{0x10}, std::byte{0x01}, std::byte{0x07}, std::byte{0x04}, std::byte{0x03},
+      std::byte{0x02}, std::byte{0x01}, std::byte{0x08}, std::byte{0x07}, std::byte{0x06},
+      std::byte{0x05}, std::byte{0x04}, std::byte{0x03}, std::byte{0x02}, std::byte{0x01},
+      std::byte{0x04}, std::byte{0x01}, std::byte{0x02}, std::byte{0x01}, std::byte{0x06},
+      std::byte{0xff}, std::byte{0x9f}, std::byte{0x1f}, std::byte{0xc0}, std::byte{0xf5},
+      std::byte{0x00},
+  };
+  std::array<std::byte, 64> encoded{};
+
+  const auto result = encode_frame({.type = MessageType::audio_uplink,
+                                    .sequence = 0x01020304U,
+                                    .timestamp_us = 0x0102030405060708ULL,
+                                    .payload = payload},
+                                   encoded);
+
+  REQUIRE(result);
+  CHECK(std::ranges::equal(std::span{encoded}.first(result.bytes_written), expected));
+}
+
+TEST_CASE("maximum payload round trips", "[frame_codec][boundary]") {
+  std::array<std::byte, max_payload_size> payload{};
+  for (auto index = 0UZ; index < payload.size(); ++index) {
+    payload[index] = static_cast<std::byte>(index & 0xffU);
+  }
+  std::array<std::byte, 640> encoded{};
+
+  const auto result = encode_frame(
+      {.type = MessageType::audio_downlink, .sequence = 9, .timestamp_us = 10, .payload = payload},
+      encoded);
+  REQUIRE(result);
+  const auto decoded = decode_frame(std::span{encoded}.first(result.bytes_written));
+
+  REQUIRE(decoded);
+  CHECK(std::ranges::equal(decoded.frame.payload, payload));
+}
+
 #if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
