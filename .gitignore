@@ -22,6 +22,8 @@ release
 /.cache/
 /.tools/
 **/build/
+**/.gradle/
+**/local.properties
 **/managed_components/
 **/sdkconfig
 **/sdkconfig.old

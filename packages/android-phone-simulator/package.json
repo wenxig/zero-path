@@ -1,0 +1,10 @@
+{
+  "name": "@zero-path/android-phone-simulator",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Kotlin 原生 Android ESP32 音频测试应用",
+  "scripts": {
+    "build": "./gradlew assembleDebug",
+    "test": "./gradlew testDebugUnitTest"
+  }
+}
